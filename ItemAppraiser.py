@@ -89,7 +89,7 @@ def safe_print(content):
         encoded_content = content.encode('utf-8', 'replace').decode('utf-8', 'replace')
         print(encoded_content + " (Note: Filename contains characters that could not be encoded in UTF-8.)")
 
-def list_contents(path, prefix='', tree_prefix=AsciiArt.BRANCH):
+def list_contents(path, prefix=''):
     global total_size
     try:
         items = os.listdir(path)
@@ -100,7 +100,8 @@ def list_contents(path, prefix='', tree_prefix=AsciiArt.BRANCH):
         safe_print(f"{prefix}{Colors.RED}PermissionError accessing {path}{Colors.RESET}")
         return
 
-    for i, item in enumerate(sorted(items, key=lambda x: x.lower())):
+    items.sort(key=lambda x: x.lower())  # Sort items for consistent order
+    for i, item in enumerate(items):
         full_path = os.path.join(path, item)
         is_last = i == (len(items) - 1)
 
@@ -108,7 +109,7 @@ def list_contents(path, prefix='', tree_prefix=AsciiArt.BRANCH):
             if os.path.isdir(full_path):
                 os.listdir(full_path)
             item_size = get_size(full_path)
-            total_size += item_size  # Update total size directly here
+            total_size += item_size
         except FileNotFoundError:
             safe_print(f"{prefix}{Colors.RED}Error: {full_path} was not found.{Colors.RESET}")
             continue
@@ -119,14 +120,16 @@ def list_contents(path, prefix='', tree_prefix=AsciiArt.BRANCH):
         size_str = size_to_string(item_size)
         color = size_to_color(item_size)
         item_color = Colors.GREEN if os.path.isfile(full_path) else Colors.BLUE
-        tree_color_prefix = f"{prefix[:-len(tree_prefix)]}{color}{tree_prefix}"
-        safe_print(f"{tree_color_prefix}{item_color}{item}{Colors.RESET} ({size_str})")
-
-        if not is_last:
-            next_prefix = prefix + AsciiArt.VERTICAL
-        else:
-            next_prefix = prefix + AsciiArt.SPACE
+        
+        # Determine the correct prefix for the tree structure
+        tree_prefix = AsciiArt.LAST_BRANCH if is_last else AsciiArt.BRANCH
+        # Apply color to the tree structure and reset before printing the item name
+        safe_print(f"{prefix}{color}{tree_prefix}{Colors.RESET}{item_color}{item}{Colors.RESET} ({size_str})")
+        
+        # Update the prefix for the next level, if not the last item use vertical bar
+        next_prefix = prefix + (AsciiArt.SPACE if is_last else AsciiArt.VERTICAL)
         if os.path.isdir(full_path):
+            # Recursive call to list contents of a directory
             list_contents(full_path, next_prefix)
 
 def main():
